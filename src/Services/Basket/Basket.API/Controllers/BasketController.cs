@@ -1,10 +1,8 @@
 ﻿using Basket.API.Entities;
+using Basket.API.GrpcServices;
 using Basket.API.Repositories;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 
@@ -15,14 +13,14 @@ namespace Basket.API.Controllers
     public class BasketController : ControllerBase
     {
         private readonly IBasketRepository _repository;
-        //private readonly DiscountGrpcService _discountGrpcService;
+        private readonly DiscountGrpcService _discountGrpcService;
         //private readonly IPublishEndpoint _publishEndpoint;
         //private readonly IMapper _mapper;
 
-        public BasketController(IBasketRepository repository/*, DiscountGrpcService discountGrpcService, IPublishEndpoint publishEndpoint, IMapper mapper*/)
+        public BasketController(IBasketRepository repository, DiscountGrpcService discountGrpcService/*, IPublishEndpoint publishEndpoint, IMapper mapper*/)
         {
             _repository = repository ?? throw new ArgumentNullException(nameof(repository));
-            //_discountGrpcService = discountGrpcService ?? throw new ArgumentNullException(nameof(discountGrpcService));
+            _discountGrpcService = discountGrpcService ?? throw new ArgumentNullException(nameof(discountGrpcService));
             //_publishEndpoint = publishEndpoint ?? throw new ArgumentNullException(nameof(publishEndpoint));
             //_mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
         }
@@ -42,11 +40,11 @@ namespace Basket.API.Controllers
             // TODO : Communicate with Discount.Grpc
             // and Calculate latest prices of product into shopping cart
             // consume Discount Grpc
-            //foreach (var item in basket.Items)
-            //{
-            //    var coupon = await _discountGrpcService.GetDiscount(item.ProductName);
-            //    item.Price -= coupon.Amount;
-            //}
+            foreach (var item in basket.Items)
+            {
+                var coupon = await _discountGrpcService.GetDiscount(item.ProductName);
+                item.Price -= coupon.Amount;
+            }
 
             return Ok(await _repository.UpdateBasket(basket));
         }
@@ -65,7 +63,7 @@ namespace Basket.API.Controllers
         [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         public async Task<IActionResult> Checkout([FromBody] BasketCheckout basketCheckout)
         {
-            // get existing basket with total price 
+            // get existing basket with total price
             // Create basketCheckoutEvent -- Set TotalPrice on basketCheckout eventMessage
             // send checkout event to rabbitmq
             // remove the basket
